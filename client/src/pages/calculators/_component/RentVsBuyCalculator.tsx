@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   LineChart,
   Line,
@@ -8,15 +8,13 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-
-const CURRENCY_LOCALE = "en-IN";
+import CalculatorCard from "./CalculatorCard.tsx";
 
 const formatCurrency = (value: number) =>
-  value.toLocaleString(CURRENCY_LOCALE, {
-    maximumFractionDigits: 0,
-  });
+  value.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
 const RentVsBuyCalculator: React.FC = () => {
+  // ---------- Input States ----------
   const [homePrice, setHomePrice] = useState<number | "">("");
   const [downPayment, setDownPayment] = useState<number | "">("");
   const [loanInterest, setLoanInterest] = useState<number | "">("");
@@ -25,113 +23,105 @@ const RentVsBuyCalculator: React.FC = () => {
   const [annualRentIncrease, setAnnualRentIncrease] = useState<number | "">("");
   const [timeHorizon, setTimeHorizon] = useState<number | "">("");
 
-  const [chartData, setChartData] = useState<
-    { year: number; Buying: number; Renting: number }[]
-  >([]);
-  const [totalRentCost, setTotalRentCost] = useState<number | null>(null);
-  const [totalBuyCost, setTotalBuyCost] = useState<number | null>(null);
-  const [recommendation, setRecommendation] = useState<"rent" | "buy" | null>(
-    null
-  );
-  const [savings, setSavings] = useState<number | null>(null);
+  // ---------- Result State ----------
+  const [result, setResult] = useState<null | {
+    chartData: { year: number; Buying: number; Renting: number }[];
+    totalBuyCost: number;
+    totalRentCost: number;
+    recommendation: "rent" | "buy";
+    savings: number;
+  }>(null);
 
-  useEffect(() => {
+  // ---------- Calculate Handler ----------
+  const calculateRentVsBuy = () => {
     if (
-      homePrice !== "" &&
-      downPayment !== "" &&
-      loanInterest !== "" &&
-      loanTenure !== "" &&
-      monthlyRent !== "" &&
-      annualRentIncrease !== "" &&
-      timeHorizon !== ""
+      !homePrice ||
+      !downPayment ||
+      !loanInterest ||
+      !loanTenure ||
+      !monthlyRent ||
+      !annualRentIncrease ||
+      !timeHorizon
     ) {
-      const price = Number(homePrice);
-      const down = Number(downPayment);
-      const loanRate = Number(loanInterest);
-      const tenureYears = Number(loanTenure);
-      const rent0 = Number(monthlyRent);
-      const rentInc = Number(annualRentIncrease);
-      const years = Number(timeHorizon);
-
-      const loanAmount = price - down;
-      const monthlyInterestRate = loanRate / 12 / 100;
-      const totalMonths = tenureYears * 12;
-
-      const emi =
-        (loanAmount *
-          monthlyInterestRate *
-          Math.pow(1 + monthlyInterestRate, totalMonths)) /
-        (Math.pow(1 + monthlyInterestRate, totalMonths) - 1);
-
-      const buyCosts: number[] = [];
-      const rentCosts: number[] = [];
-      let cumulativeBuy = down; // include down payment up front
-      let cumulativeRent = 0;
-      let currentRent = rent0;
-
-      for (let year = 1; year <= years; year++) {
-        // Add 12 months of EMI if loan still running
-        if (year <= tenureYears) {
-          cumulativeBuy += emi * 12;
-        }
-        buyCosts.push(parseFloat(cumulativeBuy.toFixed(2)));
-
-        // Rent side
-        cumulativeRent += currentRent * 12;
-        rentCosts.push(parseFloat(cumulativeRent.toFixed(2)));
-
-        // Increase rent for next year
-        currentRent *= 1 + rentInc / 100;
-      }
-
-      const data = Array.from({ length: years }, (_, i) => ({
-        year: i + 1,
-        Buying: buyCosts[i],
-        Renting: rentCosts[i],
-      }));
-
-      setChartData(data);
-
-      const finalBuyCost = buyCosts[years - 1];
-      const finalRentCost = rentCosts[years - 1];
-
-      setTotalBuyCost(finalBuyCost);
-      setTotalRentCost(finalRentCost);
-
-      if (finalRentCost < finalBuyCost) {
-        setRecommendation("rent");
-        setSavings(parseFloat((finalBuyCost - finalRentCost).toFixed(2)));
-      } else {
-        setRecommendation("buy");
-        setSavings(parseFloat((finalRentCost - finalBuyCost).toFixed(2)));
-      }
-    } else {
-      setChartData([]);
-      setTotalRentCost(null);
-      setTotalBuyCost(null);
-      setRecommendation(null);
-      setSavings(null);
+      return;
     }
-  }, [
-    homePrice,
-    downPayment,
-    loanInterest,
-    loanTenure,
-    monthlyRent,
-    annualRentIncrease,
-    timeHorizon,
-  ]);
+
+    const price = homePrice as number;
+    const down = downPayment as number;
+    const loanRate = loanInterest as number;
+    const tenureYears = loanTenure as number;
+    const rent0 = monthlyRent as number;
+    const rentInc = annualRentIncrease as number;
+    const years = timeHorizon as number;
+
+    const loanAmount = price - down;
+    const monthlyRate = loanRate / 12 / 100;
+    const totalMonths = tenureYears * 12;
+
+    const emi =
+      (loanAmount *
+        monthlyRate *
+        Math.pow(1 + monthlyRate, totalMonths)) /
+      (Math.pow(1 + monthlyRate, totalMonths) - 1);
+
+    let cumulativeBuy = down;
+    let cumulativeRent = 0;
+    let currentRent = rent0;
+
+    const buyCosts: number[] = [];
+    const rentCosts: number[] = [];
+
+    for (let year = 1; year <= years; year++) {
+      if (year <= tenureYears) {
+        cumulativeBuy += emi * 12;
+      }
+
+      buyCosts.push(parseFloat(cumulativeBuy.toFixed(2)));
+
+      cumulativeRent += currentRent * 12;
+      rentCosts.push(parseFloat(cumulativeRent.toFixed(2)));
+
+      currentRent *= 1 + rentInc / 100;
+    }
+
+    const chartData = Array.from({ length: years }, (_, i) => ({
+      year: i + 1,
+      Buying: buyCosts[i],
+      Renting: rentCosts[i],
+    }));
+
+    const finalBuyCost = buyCosts[years - 1];
+    const finalRentCost = rentCosts[years - 1];
+
+    if (finalRentCost < finalBuyCost) {
+      setResult({
+        chartData,
+        totalBuyCost: finalBuyCost,
+        totalRentCost: finalRentCost,
+        recommendation: "rent",
+        savings: parseFloat((finalBuyCost - finalRentCost).toFixed(2)),
+      });
+    } else {
+      setResult({
+        chartData,
+        totalBuyCost: finalBuyCost,
+        totalRentCost: finalRentCost,
+        recommendation: "buy",
+        savings: parseFloat((finalRentCost - finalBuyCost).toFixed(2)),
+      });
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-xl rounded-2xl space-y-8">
-      <h3 className="text-2xl font-bold text-gray-900 text-center">
-        Rent vs Buy Analyzer
-      </h3>
-
-      {/* Inputs */}
+    <CalculatorCard
+      title="Rent vs Buy Analyzer"
+      onCalculate={calculateRentVsBuy}
+      showResults={!!result}
+    >
+      {/* ---------------- Inputs ---------------- */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <input
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="input"
           placeholder="Home Price (₹)"
           type="number"
           value={homePrice}
@@ -140,7 +130,7 @@ const RentVsBuyCalculator: React.FC = () => {
           }
         />
         <input
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="input"
           placeholder="Down Payment (₹)"
           type="number"
           value={downPayment}
@@ -149,7 +139,7 @@ const RentVsBuyCalculator: React.FC = () => {
           }
         />
         <input
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="input"
           placeholder="Loan Interest Rate (%)"
           type="number"
           value={loanInterest}
@@ -160,7 +150,7 @@ const RentVsBuyCalculator: React.FC = () => {
           }
         />
         <input
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="input"
           placeholder="Loan Tenure (Years)"
           type="number"
           value={loanTenure}
@@ -169,16 +159,18 @@ const RentVsBuyCalculator: React.FC = () => {
           }
         />
         <input
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="input"
           placeholder="Monthly Rent (₹)"
           type="number"
           value={monthlyRent}
           onChange={(e) =>
-            setMonthlyRent(e.target.value === "" ? "" : Number(e.target.value))
+            setMonthlyRent(
+              e.target.value === "" ? "" : Number(e.target.value)
+            )
           }
         />
         <input
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="input"
           placeholder="Annual Rent Increase (%)"
           type="number"
           value={annualRentIncrease}
@@ -189,7 +181,7 @@ const RentVsBuyCalculator: React.FC = () => {
           }
         />
         <input
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="input"
           placeholder="Time Horizon (Years)"
           type="number"
           value={timeHorizon}
@@ -201,91 +193,87 @@ const RentVsBuyCalculator: React.FC = () => {
         />
       </div>
 
-      {/* Summary Card */}
-      <div className="bg-purple-50 p-4 rounded-lg grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-        {totalBuyCost !== null && totalRentCost !== null ? (
-          <>
+      {/* ---------------- Results ---------------- */}
+      {result && (
+        <>
+          {/* Summary */}
+          <div className="bg-muted rounded-lg p-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
             <div>
-              <p className="text-sm text-gray-500">Total Cost of Buying</p>
-              <p className="text-lg font-semibold text-purple-700">
-                ₹{formatCurrency(totalBuyCost)}
+              <p className="text-sm text-muted-foreground">
+                Total Cost of Buying
+              </p>
+              <p className="text-lg font-semibold">
+                ₹{formatCurrency(result.totalBuyCost)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Total Cost of Renting</p>
-              <p className="text-lg font-semibold text-purple-700">
-                ₹{formatCurrency(totalRentCost)}
+              <p className="text-sm text-muted-foreground">
+                Total Cost of Renting
+              </p>
+              <p className="text-lg font-semibold">
+                ₹{formatCurrency(result.totalRentCost)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Recommendation</p>
+              <p className="text-sm text-muted-foreground">Recommendation</p>
               <p
-                className={`text-lg font-semibold ${
-                  recommendation === "rent" ? "text-emerald-600" : "text-indigo-600"
+                className={`text-lg font-bold ${
+                  result.recommendation === "rent"
+                    ? "text-emerald-600"
+                    : "text-indigo-600"
                 }`}
               >
-                {recommendation === "rent" ? "RENT" : "BUY"}
+                {result.recommendation.toUpperCase()}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Potential Savings</p>
+              <p className="text-sm text-muted-foreground">
+                Potential Savings
+              </p>
               <p className="text-lg font-semibold text-emerald-600">
-                {savings !== null ? `₹${formatCurrency(savings)}` : "-"}
+                ₹{formatCurrency(result.savings)}
               </p>
             </div>
-          </>
-        ) : (
-          <p className="text-gray-500 text-center col-span-4">
-            Enter all values to compare renting vs buying
-          </p>
-        )}
-      </div>
+          </div>
 
-      {/* Chart */}
-      {chartData.length > 0 && (
-        <div className="p-4 bg-gray-50 rounded-xl shadow-inner h-80">
-          <h4 className="text-lg font-semibold text-gray-800 mb-2 text-center">
-            Cumulative Cost Over Time
-          </h4>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <XAxis
-                dataKey="year"
-                tickFormatter={(value) => `Year ${value}`}
-              />
-              <YAxis
-                tickFormatter={(value) =>
-                  `${(value / 100000).toFixed(0)}L`
-                }
-              />
-              <Tooltip
-                formatter={(value: number) =>
-                  `₹${formatCurrency(value as number)}`
-                }
-                labelFormatter={(label) => `Year ${label}`}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="Buying"
-                stroke="#7C3AED"
-                strokeWidth={2}
-                dot={false}
-                name="Buying (Cumulative)"
-              />
-              <Line
-                type="monotone"
-                dataKey="Renting"
-                stroke="#EC4899"
-                strokeWidth={2}
-                dot={false}
-                name="Renting (Cumulative)"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+          {/* Chart */}
+          <div className="h-80 bg-muted rounded-xl p-4">
+            <h4 className="text-center font-semibold mb-2">
+              Cumulative Cost Over Time
+            </h4>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={result.chartData}>
+                <XAxis dataKey="year" tickFormatter={(v) => `Year ${v}`} />
+                <YAxis
+                  tickFormatter={(v) => `${(v / 100000).toFixed(0)}L`}
+                />
+                <Tooltip
+                  formatter={(value: number) =>
+                    `₹${formatCurrency(value)}`
+                  }
+                  labelFormatter={(label) => `Year ${label}`}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="Buying"
+                  stroke="#7C3AED"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="Renting"
+                  stroke="#EC4899"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </>
       )}
-    </div>
+    </CalculatorCard>
   );
 };
 
