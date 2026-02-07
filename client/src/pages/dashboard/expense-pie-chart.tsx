@@ -105,8 +105,8 @@ const ExpensePieChart = (props: { dateRange?: DateRangeType }) => {
                   data={categories}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={60}
-                  outerRadius={80}
+                  innerRadius={70}
+                  outerRadius={85}
                   paddingAngle={2}
                   strokeWidth={2}
                   stroke="#fff"
@@ -133,7 +133,7 @@ const ExpensePieChart = (props: { dateRange?: DateRangeType }) => {
                               y={viewBox.cy}
                               className="fill-foreground text-2xl font-bold"
                             >
-                              ${totalSpent.toLocaleString()}
+                              ₹ {totalSpent.toLocaleString()}
                             </tspan>
                             <tspan
                               x={viewBox.cx}

@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 // Define the API slice
 export const chatApi = createApi({
   reducerPath: 'chatApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:8000/api/chat/' }), // Your backend URL
+  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:8000/api/chat/' }),
   endpoints: (builder) => ({
     // Define the 'chat' endpoint
     sendMessage: builder.mutation<any, { message: string }>({
