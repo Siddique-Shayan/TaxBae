@@ -146,10 +146,15 @@ const ConfirmationStep = ({
     const results: Partial<any>[] = [];
 
     csvData.forEach((row, index) => {
-      const transaction: Record<string, string> = {};
+      const transaction: Record<string, string> = {
+        paymentMethod: PAYMENT_METHODS_ENUM.CASH,
+      };
       // Apply mappings
       Object.entries(mappings).forEach(([csvColumn, transactionField]) => {
         if (transactionField === "Skip" || row[csvColumn] === undefined) return;
+
+        if (transactionField === "paymentMethod") return;
+
         transaction[transactionField] =
           transactionField === "amount"
             ? Number(row[csvColumn])

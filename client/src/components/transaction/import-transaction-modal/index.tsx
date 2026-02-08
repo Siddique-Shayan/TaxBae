@@ -26,7 +26,7 @@ const ImportTransactionModal = () => {
     { fieldName: 'type', required: true },
     { fieldName: 'date', required: true },
     { fieldName: 'category', required: true },
-    { fieldName: 'paymentMethod', required: true },
+    { fieldName: 'paymentMethod', required: false },
     { fieldName: 'description', required: false },
   ];
 
