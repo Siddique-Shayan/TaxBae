@@ -17,7 +17,7 @@ import { initializeCrons } from "./cron";
 import reportRoutes from "./routes/report.route";
 import { getDateRange } from "./utils/date";
 import analyticsRoutes from "./routes/analytics.route";
-import chatbotRouter from "./chatbot/chatbot.route";
+import chatbotRouter from "./routes/chat.route";
 
 const app = express();
 const BASE_PATH = Env.BASE_PATH;
