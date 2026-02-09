@@ -1,88 +1,148 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { GoogleGenAI } from "@google/genai";
 
+/* ---------------- SYSTEM PROMPT ---------------- */
+const TAXBAE_SYSTEM_PROMPT = `
+You are TaxBae, a professional Indian financial advisor.
+
+You help users with:
+- Income tax planning (India)
+- Investments (PPF, ELSS, Mutual Funds, FD, NPS)
+- Loans & EMIs
+- Personal finance & budgeting
+
+Rules:
+- Be clear and structured
+- Use simple language
+- Assume Indian tax laws
+- No legal disclaimers
+- If unsure, say so honestly
+- Keep answers concise and practical
+`;
+
+/* ---------------- GEMINI CLIENT ---------------- */
+const ai = new GoogleGenAI({
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+});
+
+async function askGemini(userMessage: string): Promise<string> {
+  const prompt = `
+${TAXBAE_SYSTEM_PROMPT}
+
+User: ${userMessage}
+Assistant:
+`;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash", // ✅ free-tier friendly
+    contents: prompt,
+  });
+
+  return response.text || "No response from AI";
+}
+
+/* ---------------- COMPONENT ---------------- */
 export default function Chatbot() {
   const [messages, setMessages] = useState<
     { role: "user" | "bot"; text: string }[]
   >([]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const quickAnswers: Record<string, string> = {
-    "How can I save tax this year?":
-      "You can save tax using Section 80C (₹1.5L), ELSS funds, PPF, NPS additional ₹50,000 under 80CCD(1B), health insurance under 80D, and home loan deductions under 24B and 80EE/80EEA.",
-    "Explain Section 80C benefits":
-      "Section 80C allows deductions up to ₹1.5L for investments like ELSS, PPF, EPF, life insurance premiums, home loan principal, Sukanya Samriddhi Yojana, and tax-saving FDs.",
-    "Should I choose old or new tax regime?":
-      "Choose the old regime if you claim many deductions. Choose the new regime if deductions are low — it offers lower tax slabs.",
-    "When should I file my ITR?":
-      "For most individuals, the ITR filing deadline is 31st July. If audit applies, it is 31st October.",
-    "Best investment options for tax saving":
-      "ELSS mutual funds, PPF, NPS, tax-saving FDs, and life insurance are the best tax-saving options.",
-  };
+  const quickQuestions = [
+    "How can I save tax this year?",
+    "Explain Section 80C benefits",
+    "Should I choose old or new tax regime?",
+    "When should I file my ITR?",
+    "Best investment options for tax saving",
+  ];
 
-  const sendMessage = (msg: string) => {
-    setMessages((prev) => [...prev, { role: "user", text: msg }]);
-    if (quickAnswers[msg]) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", text: quickAnswers[msg] },
-      ]);
+  const sendTypedMessage = async (text?: string) => {
+    const userText = text ?? input;
+    if (!userText.trim() || loading) return;
+
+    setInput("");
+    setLoading(true);
+
+    // add user message
+    setMessages((prev) => [...prev, { role: "user", text: userText }]);
+
+    // add thinking placeholder
+    setMessages((prev) => [...prev, { role: "bot", text: "Thinking..." }]);
+
+    try {
+      const reply = await askGemini(userText);
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "bot",
+          text: reply,
+        };
+        return updated;
+      });
+    } catch (err) {
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: "bot",
+          text: "⚠️ Something went wrong. Please try again.",
+        };
+        return updated;
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const sendTypedMessage = () => {
-    if (!input.trim()) return;
-    sendMessage(input);
-    setInput("");
-  };
-
-  const quickQuestions = Object.keys(quickAnswers);
-
   return (
     <div className="w-full h-[calc(100vh-64px)] bg-background text-foreground">
-      {/* Page Container */}
       <div className="h-full max-w-7xl mx-auto px-6 py-6">
         <div className="h-full grid grid-cols-12 gap-6">
 
-          {/* ---------------- LEFT PANEL ---------------- */}
+          {/* LEFT PANEL */}
           <aside className="col-span-12 md:col-span-3 bg-card border border-border rounded-2xl p-5 flex flex-col justify-between">
             <div>
               <h2 className="text-lg font-semibold">AI Tax Assistant</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Connected • RAG Powered
+                Demo Mode • Gemini Free Tier
               </p>
             </div>
 
-            <Button variant="outline" className="mt-6">
+            <Button
+              variant="outline"
+              className="mt-6"
+              onClick={() => setMessages([])}
+            >
               New Chat
             </Button>
           </aside>
 
-          {/* ---------------- CHAT PANEL ---------------- */}
+          {/* CHAT PANEL */}
           <section className="col-span-12 md:col-span-9 bg-card border border-border rounded-2xl flex flex-col overflow-hidden">
 
             {/* Messages */}
             <div className="flex-1 p-6 overflow-y-auto no-scrollbar space-y-4">
 
-              {/* Welcome Card */}
+              {/* Welcome */}
               <div className="bg-muted/60 border border-border rounded-xl p-5">
                 <h3 className="text-lg font-semibold mb-2">
                   ✨ Hello there! 👋 Welcome to TaxBae AI!
                 </h3>
                 <p className="text-sm text-muted-foreground mb-2">
-                  I'm here to help you with:
+                  I can help you with:
                 </p>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Tax planning & saving strategies 💰</li>
+                  <li>• Tax planning & savings 💰</li>
                   <li>• Investment guidance 📈</li>
-                  <li>• ITR filing assistance 📝</li>
-                  <li>• Section-wise deduction explanations 📚</li>
-                  <li>• Personalized financial advice 🎯</li>
+                  <li>• ITR filing 📝</li>
+                  <li>• Financial decisions 🎯</li>
                 </ul>
               </div>
 
-              {/* Chat Messages */}
+              {/* Messages */}
               {messages.map((msg, i) => (
                 <div
                   key={i}
@@ -104,7 +164,7 @@ export default function Chatbot() {
                     size="sm"
                     variant="outline"
                     className="rounded-full"
-                    onClick={() => sendMessage(q)}
+                    onClick={() => sendTypedMessage(q)}
                   >
                     {q}
                   </Button>
@@ -112,17 +172,22 @@ export default function Chatbot() {
               </div>
             </div>
 
-            {/* Input Area */}
+            {/* Input */}
             <div className="border-t border-border p-4 flex items-center gap-3 bg-background">
               <Input
-                placeholder="Ask me about taxes, investments, or financial planning..."
+                placeholder="Ask me about taxes, investments, or finance..."
                 className="flex-1"
                 value={input}
+                disabled={loading}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendTypedMessage()}
               />
-              <Button onClick={sendTypedMessage} className="px-6">
-                Send
+              <Button
+                onClick={() => sendTypedMessage()}
+                disabled={loading}
+                className="px-6"
+              >
+                {loading ? "..." : "Send"}
               </Button>
             </div>
           </section>
